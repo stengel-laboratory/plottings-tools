@@ -33,6 +33,7 @@ mono_to_xlink_string = 'mono_to_xlink'
 xlink_to_mono_string = 'xlink_to_mono'
 link_group_string = 'link_group'
 found_partners_string = 'partners_found'
+dist_string = "dist_delta"
 
 
 def plot_links(df_xtract, dfs_xquest):
@@ -60,17 +61,29 @@ def plot_links(df_xtract, dfs_xquest):
     # sp.set_xticklabels(sp.get_xticklabels(), rotation=45, ha='right')
 
 
+def label_point(x, y, val, ax):
+    a = pd.concat({'x': x, 'y': y, 'val': val}, axis=1)
+    for i, point in a.iterrows():
+        ax.text(point['x']-1.05, point['y'], str(point['val']))
 
-def plot_associated_mono_links(df_xtract):
+
+def plot_associated_mono_links(df_xtract, df_dist):
     df_xtract = get_matching_monolinks(df_xtract)
-    df_xlink = df_xtract.loc[df_xtract[type_string] == type_xlink_string]
-    df_xlink = df_xlink.loc[df_xlink[found_partners_string] != 0]
+    if not df_dist is None:
+        df_xtract = pd.merge(df_xtract, df_dist, how='outer', on=uid_string)
+        df_xtract = df_xtract[(~df_xtract[dist_string].isnull()) | (df_xtract[type_string] == type_mono_string)]
+
+    # df_xlink = df_xtract.loc[df_xtract[type_string] == type_xlink_string]
+    # df_xlink = df_xlink.loc[df_xlink[found_partners_string] != 0]
     # print(df_xlink)
     # check to see if lists are empty
     #df_xtract.loc[df_xtract[link_group_string].map(lambda d: len(d)) == 0] = 0
     # df_xtract.loc[df_xtract[found_partners_string].map(lambda d: len(d)) == 0] = 0
     df_xtract = df_xtract.loc[df_xtract[found_partners_string] > 0]
     df_xtract = df_xtract.loc[df_xtract[fdr_string] <= 0.05]
+
+
+
     ax = sns.scatterplot(x=link_group_string, y=log2_string, style=type_string, hue=type_string, data=df_xtract,
                         palette="Set1", s=150)
     ax.xaxis.set_major_locator(ticker.MultipleLocator(5))
@@ -83,6 +96,13 @@ def plot_associated_mono_links(df_xtract):
             c = 'skyblue'
             b_alt = True
         ax.vlines(x=x,ymin=min(df_xtract[log2_string]),ymax=max(df_xtract[log2_string]),linestyles=':',colors=c)
+    # ax.hlines(y=0, xmin=min(df_xtract[link_group_string]), xmax=max(df_xtract[link_group_string]), linestyles='-', colors='grey')
+    ax.hlines(y=1, xmin=min(df_xtract[link_group_string]), xmax=max(df_xtract[link_group_string]), linestyles='--', colors='grey')
+    ax.hlines(y=-1, xmin=min(df_xtract[link_group_string]), xmax=max(df_xtract[link_group_string]), linestyles='--', colors='grey')
+    if not df_dist is None:
+        df_xtract = df_xtract[~df_xtract[dist_string].isnull()]
+        df_xtract[dist_string] = df_xtract[dist_string].round()
+        label_point(df_xtract[link_group_string], df_xtract[log2_string], df_xtract[dist_string], ax)
     plt.tight_layout()
 
 
@@ -131,14 +151,17 @@ def get_matching_monolinks(df_xtract: pd.DataFrame):
 def main():
     dfs_xquest = []
     df_xtract = None
+    df_dist = None
     for inp in args.input:
         if ".xls" in inp:
             # the xls files written by xtract are buggy and can only be read this way
             df = pd.read_csv(inp, delim_whitespace=True)
         else:
             df = pd.read_csv(inp, engine='python')
-        if uid_string in df:
+        if uid_string in df and not "dist_delta" in df:
             df_xtract = df
+        elif "dist_delta" in df:
+            df_dist = df
         elif uxid_string in df:
             dfs_xquest.append(df)
         else:
@@ -146,7 +169,11 @@ def main():
     if dfs_xquest:
         plot_links(df_xtract, dfs_xquest)
     else:
-        plot_associated_mono_links(df_xtract)
+        plot_associated_mono_links(df_xtract, df_dist)
+    figure = plt.gcf()  # get current figure
+    plt.tight_layout()
+    figure.set_size_inches(19,12)
+    plt.tight_layout()
     plt.savefig(args.output)
     plt.show()
 
