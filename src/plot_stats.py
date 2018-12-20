@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import plot_library as plib
 import statsmodels.sandbox.stats.multicomp as sm
 
 desc = """Kai Kammer - 2018-09-02. 
@@ -14,7 +15,7 @@ Also allows plotting of xtract raw_stat.xls files
 
 
 parser = argparse.ArgumentParser(description=desc, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('-i', '--input', action="store", dest="input",
+parser.add_argument('input', action="store",
                     help="Name of the input file")
 parser.add_argument('-o', '--outname', action="store", dest="outname", default='plot.png',
                     help="Name for the output figure")
@@ -104,43 +105,48 @@ def get_bh_fdr(p_vals, xtract=False):
     bh_s[bh_s > 1] = 1
     return bh_s#sm.multipletests(p_vals, method='fdr_bh')[1]
 
+
+
 def plot_xtract_df(df):
     df = df.sort_values("pvalue")
     df = df.reset_index(drop=True)
     df["fdr_corr"] = get_bh_fdr(df["pvalue"].values, xtract=False)
     df.hist(column=["pvalue", "Bonf", "FDR", "fdr_corr"], density=True, range=[0, 1], sharey=True, grid=False)
-    plt.tight_layout()
-    df.plot(title="Sign. Comparison", kind="line", y=["pvalue", "Bonf", "FDR", "fdr_corr"])
-    plt.tight_layout()
+    plib.save_fig("xtract_hist")
+    df.plot(title="Stats Comparison", kind="line", y=["pvalue", "Bonf", "FDR", "fdr_corr"])
+    plib.save_fig("xtract_stats")
     df.plot(title="log2", kind="kde", y=["log2ratio"])
-    plt.tight_layout()
+    plib.save_fig("xtract_log2_kde")
     df = df.sort_values("log2ratio")
     df = df.reset_index()
     g = sns.jointplot(x='log2ratio', y='FDR', data=df, kind='hex')
-    plt.tight_layout()
+    plib.save_fig("xtract_log2_vs_fdr_hex")
     ax = df.plot(title="log2 vs qval", kind="line", y=["log2ratio", "FDR"], secondary_y=["FDR"])
     ax_min , ax_max = ax.get_xlim()
     ax.hlines(y=[-1,1], xmin=ax_min, xmax=ax_max, linestyles='--', colors='grey')
-    plt.tight_layout()
-
+    plib.save_fig("xtract_log2_and_fdr")
+    df = df.sort_values("FDR")
+    df = df.reset_index(drop=True)
+    print(df["FDR"])
+    ax = df.plot(title="qval kde", kind="line", y=["FDR"])
 
 def plot_xquest_df(df):
     df = df.sort_values("FDR")
     df = df.reset_index()
     df.plot(kind="line", y=["ld-Score"], x="FDR")
-    plt.tight_layout()
-    df.plot(kind="line", y=["FDR"])
-    plt.tight_layout()
+    plib.save_fig("xquest_fdr_vs_ld")
+    # df.plot(kind="line", y=["FDR"])
     df.plot(kind="kde", y=["ld-Score"])
+    plib.save_fig("xquest_ld_kde")
     df.hist()
-    plt.tight_layout()
+    plib.save_fig("xquest_hist_all")
 
 def plot_sample_df(sample_dict):
     df = pd.DataFrame().from_dict(sample_dict)
     df.plot(title="Sign. Comparison", kind="line")
-    plt.tight_layout()
+    plib.save_fig("sample_dist")
     df.hist(density=True, range=[0, 1], sharey=True)
-    plt.tight_layout()
+    plib.save_fig("sample_dist_hist")
 
 def plot_xtract_raw_stats(df):
     # FDR=FP/(FP+TP); TPR=TP/(TP+FN) (sensitivity); TNR=TN/(TN+FP) (specificity)
@@ -153,7 +159,7 @@ def plot_xtract_raw_stats(df):
     sens_1_crossover = df[df["svalue"] >= 1].iloc[0][xval]
     # df_norm = (df - df.mean()) / (df.max() - df.min())  # normalize to -1;+1
     # df_norm = (df - df.min()) / (df.max() - df.min())  # normalize to 0;1 intra-group
-    df_norm = (df - min(df.min())) / max((df.max()) - min(df.min()))  # normalize to 0;1 inter-group
+    df_norm = (df - min(df.min())) / max((df.max()) - min(df.min()))  # normalize to 0;1 inter-group+
     df_norm[xval] = df[xval]
     df_norm["spec"] = df_norm["TN"]/(df_norm["TN"] + df_norm["FP"])
     # note that we have normalized all columns to their min/max values of all columns (i.e. inter-group)
@@ -168,10 +174,8 @@ def plot_xtract_raw_stats(df):
     # the following two also work but I prefer the previous
     # pd_ax.axvline(x=sens_1_crossover)
     # pd_ax.plot((sens_1_crossover, sens_1_crossover), (0,1),label="svalue cutoff")
-    plt.tight_layout()
     # df.plot(x=xval, y=["TP", "FP", "TN", "FN"])
-    plt.tight_layout()
-
+    plib.save_fig("xtract_raw_stats")
 
 def main():
     uxid_string = 'uxID'
@@ -205,7 +209,6 @@ def main():
     plot_dict = {"p_val": p_vals, "bonf": bonf, "fdr_xtract": bh_xt, "fdr_corr": bh}
 
     #plot_sample_df(plot_dict)
-    plt.savefig(args.outname)
     plt.show()
 
 

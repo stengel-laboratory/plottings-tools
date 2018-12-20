@@ -5,16 +5,17 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib.ticker as ticker
+import plot_library as plib
 
 desc = """Kai Kammer - 2018-09-17. 
 Script to visualize crosslink patterns
 """
 
 parser = argparse.ArgumentParser(description=desc, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('-i', '--input', action="store", dest="input", default=None, type=str, nargs='+',
+parser.add_argument('input', action="store", default=None, type=str, nargs='+',
                     help="List of input csv files separated by spaces")
-parser.add_argument('-o', '--output', action="store", dest="output", default='plot.png',
-                    help="Name for the output figure")
+parser.add_argument('-o', '--outname', action="store", dest="outname", default='',
+                    help="Append this postfix to the plot file name.")
 args = parser.parse_args()
 
 uxid_string = 'uxID'
@@ -54,7 +55,7 @@ def plot_links(df_xtract, dfs_xquest):
                          palette="Set2")
     sp.hlines(y=1, xmin=0, xmax=len(uid_count_dict), label="log2=1", colors=['purple'])
     sp.hlines(y=-1, xmin=0, xmax=len(uid_count_dict), label="log2=1", colors=['purple'])
-    plt.tight_layout()
+    plib.save_fig("xquest_xtract_combined_{0}".format(args.outname))
     # sns.barplot(x=uid_string,y=log2_string,data=df)
     # df.plot(x=uid_string,y=log2_string,kind='bar')
     # plt.xticks(rotation=30)
@@ -64,7 +65,7 @@ def plot_links(df_xtract, dfs_xquest):
 def label_point(x, y, val, ax):
     a = pd.concat({'x': x, 'y': y, 'val': val}, axis=1)
     for i, point in a.iterrows():
-        ax.text(point['x']-1.05, point['y'], str(point['val']))
+        ax.text(point['x']-1.8, point['y']+0.1, str(point['val']), fontsize=14, fontweight=600)
 
 
 def plot_associated_mono_links(df_xtract, df_dist):
@@ -79,7 +80,8 @@ def plot_associated_mono_links(df_xtract, df_dist):
     # check to see if lists are empty
     #df_xtract.loc[df_xtract[link_group_string].map(lambda d: len(d)) == 0] = 0
     # df_xtract.loc[df_xtract[found_partners_string].map(lambda d: len(d)) == 0] = 0
-    df_xtract = df_xtract.loc[df_xtract[found_partners_string] > 0]
+
+    df_xtract = df_xtract.loc[df_xtract[found_partners_string] > 1]
     df_xtract = df_xtract.loc[df_xtract[fdr_string] <= 0.05]
 
 
@@ -103,8 +105,7 @@ def plot_associated_mono_links(df_xtract, df_dist):
         df_xtract = df_xtract[~df_xtract[dist_string].isnull()]
         df_xtract[dist_string] = df_xtract[dist_string].round()
         label_point(df_xtract[link_group_string], df_xtract[log2_string], df_xtract[dist_string], ax)
-    plt.tight_layout()
-
+    plib.save_fig("xtract_monolinks_{0}".format(args.outname))
 
 def get_matching_monolinks(df_xtract: pd.DataFrame):
     df_new = pd.DataFrame(df_xtract)
@@ -158,9 +159,9 @@ def main():
             df = pd.read_csv(inp, delim_whitespace=True)
         else:
             df = pd.read_csv(inp, engine='python')
-        if uid_string in df and not "dist_delta" in df:
+        if uid_string in df and not dist_string in df:
             df_xtract = df
-        elif "dist_delta" in df:
+        elif dist_string in df:
             df_dist = df
         elif uxid_string in df:
             dfs_xquest.append(df)
@@ -170,11 +171,7 @@ def main():
         plot_links(df_xtract, dfs_xquest)
     else:
         plot_associated_mono_links(df_xtract, df_dist)
-    figure = plt.gcf()  # get current figure
-    plt.tight_layout()
-    figure.set_size_inches(19,12)
-    plt.tight_layout()
-    plt.savefig(args.output)
+
     plt.show()
 
 if __name__ == "__main__":

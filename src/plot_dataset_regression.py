@@ -14,7 +14,7 @@ Script to do a linear regression between datasets by looking at a given regressi
 
 
 parser = argparse.ArgumentParser(description=desc, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('-i', '--input', action="store", dest="input", default=None, type=str, nargs='+',
+parser.add_argument('input', action="store", default=None, type=str, nargs='+',
                     help="List of input csv files separated by spaces")
 parser.add_argument('-o', '--outname', action="store", dest="outname", default='plot.png',
                     help="Name for the output figure")
