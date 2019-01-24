@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import os.path
 from matplotlib_venn import venn2,venn3
 from numpy import sign
+import link_library.plot_library as plib
 
 desc = """Kai Kammer - 2018-01-29. 
 Script to do a linear regression between datasets by looking at a given regression key. 
@@ -16,8 +17,6 @@ Script to do a linear regression between datasets by looking at a given regressi
 parser = argparse.ArgumentParser(description=desc, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('input', action="store", default=None, type=str, nargs='+',
                     help="List of input csv files separated by spaces")
-parser.add_argument('-o', '--outname', action="store", dest="outname", default='plot.png',
-                    help="Name for the output figure")
 parser.add_argument('-p', '--plots', action="store", dest="plots", default=['venn'], type=str, nargs='+',
                     help="List of figure types to be plotted separated by spaces. "
                          "Possible keywords: venn (venn diagram), regr (regression), comp (comparison)")
@@ -75,9 +74,11 @@ def plot_regression_lfq_vs_diff(df):
         if args.quant:
             df_new['same_sign'] = df_new.apply(compare_log2ratio, args=(rename_to_1, rename_to_2), axis=1)
             sns.lmplot(x=rename_to_1, y=rename_to_2, hue='same_sign', data=df_new, fit_reg=False, legend_out=False)
+            plib.save_fig("regr_log2ratio")
         else:
             df_new['regr_compare'] = df_new.apply(compare_scores, args=(rename_to_1, rename_to_2), axis=1)
             sns.lmplot(x=rename_to_1, y=rename_to_2, hue='regr_compare', data=df_new, fit_reg=False, legend_out=False)
+            plib.save_fig("regr_ldscores")
         #sns.regplot(x="ld-Score_lfq", y="ld-Score_diff",data=df_new, color=df_new['score_compare'])
         sns.jointplot(x=rename_to_1, y=rename_to_2, data=df_new, kind="reg")
         # sns.lmplot(x="ld-Score_lfq", y="ld-Score_diff", col=origin_str, hue=origin_str, data=df_new,
@@ -91,6 +92,7 @@ def plot_regression_dist_vs_log2ratio(df):
     df['log2abs'] = abs(df["log2ratio"])*40
     df = df.sort_values(['log2abs'], ascending=True)
     lm = sns.lmplot(x=args.key1, y=args.key2, hue='regulation', data=df, fit_reg=False, legend_out=False, scatter_kws={"s":df["log2abs"]**1.3}) # sorted(df["log2abs"]) does not sort correctly :(
+    plib.save_fig("log2_regulation")
     #lm.set_xticklabels(rotation='vertical', labels=df['uID'])
     sel = df[df['regulation'] != "not_signi"]
     #sns.jointplot(x=args.key1, y=args.key2, data=sel, kind="reg")
@@ -109,13 +111,18 @@ def plot_venn(df):
         set1 = set(df_list[0][args.key1].tolist())
         set2 = set(df_list[1][args.key1].tolist())
         venn2([set1, set2], set_labels=(df_list[0].name, df_list[1].name), alpha=0.65)
-    if len(df_list) == 3:
+        plib.save_fig("venn_{0}".format(args.key1))
+    elif len(df_list) == 3:
         set1 = set(df_list[0][args.key1].tolist())
         set2 = set(df_list[1][args.key1].tolist())
         set3 = set(df_list[2][args.key1].tolist())
         venn3([set1, set2, set3], alpha=0.65, set_labels=(df_list[0].name,
                                               df_list[1].name,
                                               df_list[2].name))
+        plib.save_fig("venn_{0}".format(args.key1))
+    else:
+        print("ERROR: Too many entries for a venn diagramm: {0}".format(len(df_list)))
+        exit(1)
 
 def compare_scores(row, key1, key2):
     if row[key1] == row[key2]:
@@ -170,8 +177,6 @@ def main():
         plot_regression_lfq_vs_diff(df)
     if 'comp' in args.plots and args.quant:
         plot_regression_dist_vs_log2ratio(df)
-    plt.savefig(args.outname)
-    plt.show()
 
 
 if __name__ == "__main__":
