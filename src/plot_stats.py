@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import plot_library as plib
+import link_library.plot_library as plib
 import statsmodels.sandbox.stats.multicomp as sm
 
 desc = """Kai Kammer - 2018-09-02. 
