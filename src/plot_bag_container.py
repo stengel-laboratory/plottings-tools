@@ -25,14 +25,20 @@ parser.add_argument('-l', '--level_ms1', action="store", dest="level", default='
                          "or uxID (protein).")
 parser.add_argument('-f', '--filter', action="store", dest="filter", default="",
                     help="Optionally specify a link type to filter for. Possible values: monolink, xlink")
+parser.add_argument('-e', '--sel_exp', action="store_true", dest="sel_exp", default=False,
+                    help="Optionally provide this flag to select specific experiments to plot")
 parser.add_argument('-p', '--plot_type', action="store", dest="plot", default='scatter',
                     help="Type of plot. Possible values: scatter, bar,"
-                         " lh (light heavy), rep (replicates), rep_bar, cluster, std (standard deviation)")
+                         " lh (light heavy), rep (replicates), rep_bar, cluster, std (standard deviation),"
+                         " link (ms1 area overview), log2r (log2ratio), dil (dilution series)")
+parser.add_argument('-d', '--domains', action="store", dest="domains", default="",
+                    help="Optionally specify a file containing domain ranges to color certain plots.")
 args = parser.parse_args()
 
 
 def main():
     df_list = []  # tuple (dataframe, bag_container)
+    df_domains = None
     uid_string = "b_peptide_uID"
     for inp in args.input:
         if ".xls" in inp:
@@ -47,8 +53,11 @@ def main():
         else:
             print("WARNING: No compatible input found for {0}".format(args.input))
             exit(1)
-    bag_cont = process_bag.BagContainer(level=args.level, df_list=df_list, filter=args.filter)
-    plotter = plot_bag.PlotMaster(bag_cont)
+    if args.domains:
+        df_domains = pd.read_csv(args.domains, engine='python')
+    bag_cont = process_bag.BagContainer(level=args.level, df_list=df_list, filter=args.filter, sel_exp=args.sel_exp,
+                                        df_domains=df_domains)
+    plotter = plot_bag.PlotMaster(bag_cont, out_folder=args.outname)
     if args.plot == 'scatter':
         plotter.plot_scatter()
     elif args.plot == 'bar':
@@ -63,6 +72,12 @@ def main():
         plotter.plot_clustermap()
     elif args.plot == 'std':
         plotter.plot_ms1_area_std()
+    elif args.plot == 'link':
+        plotter.plot_link_overview()
+    elif args.plot == 'log2r':
+        plotter.plot_log2ratio()
+    elif args.plot == 'dil':
+        plotter.plot_dilution_series()
     else:
         print("WARNING: No compatible plot specified: {0}".format(args.input))
         exit(1)
