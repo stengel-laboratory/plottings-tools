@@ -5,7 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib.ticker as ticker
-import plot_library as plib
+import link_library.plot_library as plib
 
 desc = """Kai Kammer - 2018-09-17. 
 Script to visualize crosslink patterns
