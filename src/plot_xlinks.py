@@ -18,6 +18,7 @@ parser.add_argument('-o', '--outname', action="store", dest="outname", default='
                     help="Append this postfix to the plot file name.")
 args = parser.parse_args()
 
+
 uxid_string = 'uxID'
 uid_string = 'uID'
 pos1_string = 'AbsPos1'
@@ -55,22 +56,33 @@ def plot_links(df_xtract, dfs_xquest):
                          palette="Set2")
     sp.hlines(y=1, xmin=0, xmax=len(uid_count_dict), label="log2=1", colors=['purple'])
     sp.hlines(y=-1, xmin=0, xmax=len(uid_count_dict), label="log2=1", colors=['purple'])
-    plib.save_fig("xquest_xtract_combined_{0}".format(args.outname))
+    plib.save_fig("xquest_xtract_combined".format(args.outname))
     # sns.barplot(x=uid_string,y=log2_string,data=df)
     # df.plot(x=uid_string,y=log2_string,kind='bar')
     # plt.xticks(rotation=30)
     # sp.set_xticklabels(sp.get_xticklabels(), rotation=45, ha='right')
 
 
-def label_point(x, y, val, ax):
-    a = pd.concat({'x': x, 'y': y, 'val': val}, axis=1)
-    for i, point in a.iterrows():
-        ax.text(point['x']-1.8, point['y']+0.1, str(point['val']), fontsize=14, fontweight=600)
-
-
 def plot_associated_mono_links(df_xtract, df_dist):
+    # sns.set_style("whitegrid")
+    def renumber_groups(x):
+        if not hasattr(renumber_groups, "counter"):
+            renumber_groups.counter = 0  # it doesn't exist yet, so initialize it
+        x[link_group_string] = renumber_groups.counter
+        renumber_groups.counter += 1
+        return x
+    def rename_groups(x):
+        uid_list = []
+        entry_link = x[x[type_string] == type_xlink_string]
+        uid_list.append(entry_link[uid_string].iloc[0])
+        for n in range(len(x[x[type_string] == type_mono_string])):
+            uid_list.append(entry_link[uid_string].iloc[0])
+        x[link_group_string] = uid_list
+        return x
     df_xtract = get_matching_monolinks(df_xtract)
     if not df_dist is None:
+        print(df_xtract)
+        print(df_dist)
         df_xtract = pd.merge(df_xtract, df_dist, how='outer', on=uid_string)
         df_xtract = df_xtract[(~df_xtract[dist_string].isnull()) | (df_xtract[type_string] == type_mono_string)]
 
@@ -81,16 +93,22 @@ def plot_associated_mono_links(df_xtract, df_dist):
     #df_xtract.loc[df_xtract[link_group_string].map(lambda d: len(d)) == 0] = 0
     # df_xtract.loc[df_xtract[found_partners_string].map(lambda d: len(d)) == 0] = 0
 
-    df_xtract = df_xtract.loc[df_xtract[found_partners_string] > 1]
-    df_xtract = df_xtract.loc[df_xtract[fdr_string] <= 0.05]
+    df_xtract = df_xtract.groupby(link_group_string).filter(lambda x: len(x[x[type_string] == type_xlink_string]) == 1)
+    df_xtract = df_xtract.groupby(link_group_string).filter(lambda x: len(x[x[type_string] == type_mono_string]) == 2)
+    df_xtract = df_xtract.reset_index(drop=True)
+    df_xtract = df_xtract.groupby(link_group_string).apply(rename_groups)
+    df_xtract.to_csv("dist_final_out.csv")
+    # df_xtract[link_group_string] = df_xtract[link_group_string].astype('str')
+    # df_xtract = df_xtract.loc[df_xtract[fdr_string] <= 0.05]
 
-
-
+    plib.save_fig("xtract_dist_link_overview".format(args.outname))
     ax = sns.scatterplot(x=link_group_string, y=log2_string, style=type_string, hue=type_string, data=df_xtract,
                         palette="Set1", s=150)
-    ax.xaxis.set_major_locator(ticker.MultipleLocator(5))
+    ax.xaxis.set_tick_params(rotation=90)
+    # ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
+    num_x = len(df_xtract[link_group_string].unique())
     b_alt = True
-    for x in df_xtract[link_group_string]:
+    for x in range(num_x):
         if b_alt:
             c = 'lightcoral'
             b_alt = False
@@ -99,13 +117,19 @@ def plot_associated_mono_links(df_xtract, df_dist):
             b_alt = True
         ax.vlines(x=x,ymin=min(df_xtract[log2_string]),ymax=max(df_xtract[log2_string]),linestyles=':',colors=c)
     # ax.hlines(y=0, xmin=min(df_xtract[link_group_string]), xmax=max(df_xtract[link_group_string]), linestyles='-', colors='grey')
-    ax.hlines(y=1, xmin=min(df_xtract[link_group_string]), xmax=max(df_xtract[link_group_string]), linestyles='--', colors='grey')
-    ax.hlines(y=-1, xmin=min(df_xtract[link_group_string]), xmax=max(df_xtract[link_group_string]), linestyles='--', colors='grey')
-    if not df_dist is None:
-        df_xtract = df_xtract[~df_xtract[dist_string].isnull()]
-        df_xtract[dist_string] = df_xtract[dist_string].round()
-        label_point(df_xtract[link_group_string], df_xtract[log2_string], df_xtract[dist_string], ax)
-    plib.save_fig("xtract_monolinks_{0}".format(args.outname))
+    ax.hlines(y=1, xmin=0, xmax=num_x-1, linestyles='--', colors='grey')
+    ax.hlines(y=-1, xmin=0, xmax=num_x-1, linestyles='--', colors='grey')
+    if df_dist is not None:
+        df_xtract_xl_only = df_xtract[~df_xtract[dist_string].isnull()]
+        df_xtract_xl_only[dist_string] = df_xtract_xl_only[dist_string].round().astype('int32')
+        plib.label_point(df_xtract_xl_only[link_group_string], df_xtract_xl_only[log2_string], df_xtract_xl_only[dist_string], ax)
+    plib.save_fig("xtract_monolinks".format(args.outname))
+    if df_dist is not None:
+        plt.clf()
+        sns.regplot(data=df_xtract, y=dist_string, x=log2_string)
+        plib.save_fig("xtract_dist".format(args.outname))
+
+
 
 def get_matching_monolinks(df_xtract: pd.DataFrame):
     df_new = pd.DataFrame(df_xtract)
