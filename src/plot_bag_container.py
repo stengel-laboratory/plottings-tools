@@ -26,13 +26,15 @@ parser.add_argument('-l', '--level_ms1', action="store", dest="level", default='
 parser.add_argument('-f', '--filter', action="store", dest="filter", default="",
                     help="Optionally specify a link type to filter for. Possible values: monolink, xlink")
 parser.add_argument('-e', '--sel_exp', action="store_true", dest="sel_exp", default=False,
-                    help="Optionally provide this flag to select specific experiments to plot")
+                    help="Optionally provide this flag to exclude specific experiments before plotting")
 parser.add_argument('-p', '--plot_type', action="store", dest="plot", default='scatter',
                     help="Type of plot. Possible values: scatter, bar,"
                          " lh (light heavy), rep (replicates), rep_bar, cluster, std (standard deviation),"
                          " link (ms1 area overview), log2r (log2ratio), dil (dilution series)")
 parser.add_argument('-d', '--domains', action="store", dest="domains", default="",
                     help="Optionally specify a file containing domain ranges to color certain plots.")
+parser.add_argument('-i', '--impute', action="store_true", dest="impute", default=False,
+                    help="Optionally provide this flag to impute missing values for log2ratio calculations")
 args = parser.parse_args()
 
 
@@ -56,7 +58,7 @@ def main():
     if args.domains:
         df_domains = pd.read_csv(args.domains, engine='python')
     bag_cont = process_bag.BagContainer(level=args.level, df_list=df_list, filter=args.filter, sel_exp=args.sel_exp,
-                                        df_domains=df_domains)
+                                        df_domains=df_domains, impute_missing=args.impute)
     plotter = plot_bag.PlotMaster(bag_cont, out_folder=args.outname)
     if args.plot == 'scatter':
         plotter.plot_scatter()
