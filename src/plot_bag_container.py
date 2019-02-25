@@ -30,7 +30,7 @@ parser.add_argument('-e', '--sel_exp', action="store_true", dest="sel_exp", defa
 parser.add_argument('-p', '--plot_type', action="store", dest="plot", default='scatter',
                     help="Type of plot. Possible values: scatter, bar,"
                          " lh (light heavy), rep (replicates), rep_bar, cluster, std (standard deviation),"
-                         " link (ms1 area overview), log2r (log2ratio), dil (dilution series)")
+                         " link (ms1 area overview), log2r (log2ratio), dil (dilution series), domain")
 parser.add_argument('-d', '--domains', action="store", dest="domains", default="",
                     help="Optionally specify a file containing domain ranges to color certain plots.")
 parser.add_argument('-i', '--impute', action="store_true", dest="impute", default=False,
@@ -80,6 +80,10 @@ def main():
         plotter.plot_log2ratio()
     elif args.plot == 'dil':
         plotter.plot_dilution_series()
+    elif args.plot == 'domain':
+        plotter.plot_domain_overview()
+    elif args.plot == 'monoq':
+        plotter.plot_mono_vs_xlink_quant()
     else:
         print("WARNING: No compatible plot specified: {0}".format(args.input))
         exit(1)
