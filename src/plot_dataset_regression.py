@@ -70,7 +70,7 @@ def plot_regression_lfq_vs_diff(df):
         sel2 = sel2.rename(columns={args.key2: rename_to_2})
         sel1[rename_to_2] = sel2[rename_to_2].values
         sel2[rename_to_1] = sel1[rename_to_1].values
-        df_new = pd.concat([sel1, sel2], ignore_index=True)
+        df_new = pd.concat([sel1, sel2], ignore_index=True, sort=True)
         if args.quant:
             df_new['same_sign'] = df_new.apply(compare_log2ratio, args=(rename_to_1, rename_to_2), axis=1)
             sns.lmplot(x=rename_to_1, y=rename_to_2, hue='same_sign', data=df_new, fit_reg=False, legend_out=False)
@@ -168,7 +168,7 @@ def main():
     df_list = [pd.read_csv(f, sep=None, engine='python') for f in args.input]
     add_origin(df_list)
     # df is the final output dataframe concatenated from the modified input files
-    df = pd.concat(df_list)  # type: pd.DataFrame
+    df = pd.concat(df_list, sort=True)  # type: pd.DataFrame
 
     #plot_cat(df)
     if 'venn' in args.plots:
