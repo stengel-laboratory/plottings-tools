@@ -2,13 +2,11 @@
 
 import argparse
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import matplotlib.ticker as ticker
-import link_library.plot_library as plib
+import link_library as ll
+import link_library.xtract_library.plot_xt as plot_xt
 
 desc = """Kai Kammer - 2018-09-17. 
-Script to visualize crosslink patterns
+Script to visualize crosslink log2ratio patterns as given by xTract
 """
 
 parser = argparse.ArgumentParser(description=desc, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -19,162 +17,95 @@ parser.add_argument('-o', '--outname', action="store", dest="outname", default='
 args = parser.parse_args()
 
 
-uxid_string = 'uxID'
-uid_string = 'uID'
-pos1_string = 'AbsPos1'
-pos2_string = 'AbsPos2'
-score_string = 'ld-Score'
-log2_string = 'log2ratio'
-times_found_xq_string = 'times_found_xq'
-fdr_string = 'FDR'
-type_string = 'type'
-type_xlink_string = 'xlink'
-type_mono_string = 'monolink'
-signi_string = 'significance'
-mono_to_xlink_string = 'mono_to_xlink'
-xlink_to_mono_string = 'xlink_to_mono'
-link_group_string = 'link_group'
-found_partners_string = 'partners_found'
-dist_string = "dist_delta"
+xt_db = ll.xTractDB()
 
 
-def plot_links(df_xtract, dfs_xquest):
-    # get dict like columns->values
-    dict_xtract = df_xtract.to_dict(orient='list')
-    uid_count_dict = {k: 0 for k in dict_xtract[uid_string]}
-    for df_xquest in dfs_xquest:
-        dict_xquest = df_xquest.to_dict(orient='list')
-        for uid in dict_xtract[uid_string]:
-            if uid in dict_xquest[uxid_string]:
-                uid_count_dict[uid] += 1
+@ll.timeit
+def get_matching_monos(df):
+    print(df.groupby(xt_db.type_string)[xt_db.uxid_string].nunique())
+    def find_associated_link(x, df_monos):
+        def is_equal(a,b):  # given two links a and b check whether they link the same protein and position
+            prots_a = (a[xt_db.prot_string].iloc[0])
+            pos_a = (a[xt_db.pos_string].iloc[0])
+            prot_pos_a = set(zip(prots_a, pos_a))  # put prot name and pos into tuple for easy set intersection
+            prots_b = (b[xt_db.prot_string].iloc[0])
+            pos_b = (b[xt_db.pos_string].iloc[0])
+            prot_pos_b = set(zip(prots_b, pos_b))
+            link_intersect = prot_pos_a & prot_pos_b  # get intersecting links
+            if len(link_intersect) > 0:
+                return True
+            return False
 
-    df_count = pd.DataFrame.from_dict(
-        {uid_string: list(uid_count_dict.keys()), times_found_xq_string: list(uid_count_dict.values())},
-        orient='columns')
-    df = pd.merge(df_xtract, df_count, on=[uid_string], how='outer')
-    sp = sns.scatterplot(x=uid_string, y=log2_string, hue=times_found_xq_string, size=type_string, data=df,
-                         palette="Set2")
-    sp.hlines(y=1, xmin=0, xmax=len(uid_count_dict), label="log2=1", colors=['purple'])
-    sp.hlines(y=-1, xmin=0, xmax=len(uid_count_dict), label="log2=1", colors=['purple'])
-    plib.save_fig("xquest_xtract_combined".format(args.outname))
-    # sns.barplot(x=uid_string,y=log2_string,data=df)
-    # df.plot(x=uid_string,y=log2_string,kind='bar')
-    # plt.xticks(rotation=30)
-    # sp.set_xticklabels(sp.get_xticklabels(), rotation=45, ha='right')
-
-
-def plot_associated_mono_links(df_xtract, df_dist):
-    # sns.set_style("whitegrid")
-    def renumber_groups(x):
-        if not hasattr(renumber_groups, "counter"):
-            renumber_groups.counter = 0  # it doesn't exist yet, so initialize it
-        x[link_group_string] = renumber_groups.counter
-        renumber_groups.counter += 1
+        tmp = df_monos.groupby(xt_db.uxid_string).filter(lambda y: is_equal(x, y))
+        if len(tmp) > 0:
+            tmp[xt_db.link_group_string] = x[xt_db.link_group_string].iloc[0]
+            # x[associated_link_string] = [tmp[uid_string].values]  # assignment is buggy and not needed anyway
+            x = pd.concat([x,tmp], sort=True)
         return x
-    def rename_groups(x):
-        uid_list = []
-        entry_link = x[x[type_string] == type_xlink_string]
-        uid_list.append(entry_link[uid_string].iloc[0])
-        for n in range(len(x[x[type_string] == type_mono_string])):
-            uid_list.append(entry_link[uid_string].iloc[0])
-        x[link_group_string] = uid_list
-        return x
-    df_xtract = get_matching_monolinks(df_xtract)
-    if not df_dist is None:
-        print(df_xtract)
-        print(df_dist)
-        df_xtract = pd.merge(df_xtract, df_dist, how='outer', on=uid_string)
-        df_xtract = df_xtract[(~df_xtract[dist_string].isnull()) | (df_xtract[type_string] == type_mono_string)]
 
-    # df_xlink = df_xtract.loc[df_xtract[type_string] == type_xlink_string]
-    # df_xlink = df_xlink.loc[df_xlink[found_partners_string] != 0]
-    # print(df_xlink)
-    # check to see if lists are empty
-    #df_xtract.loc[df_xtract[link_group_string].map(lambda d: len(d)) == 0] = 0
-    # df_xtract.loc[df_xtract[found_partners_string].map(lambda d: len(d)) == 0] = 0
-
-    df_xtract = df_xtract.groupby(link_group_string).filter(lambda x: len(x[x[type_string] == type_xlink_string]) == 1)
-    df_xtract = df_xtract.groupby(link_group_string).filter(lambda x: len(x[x[type_string] == type_mono_string]) == 2)
-    df_xtract = df_xtract.reset_index(drop=True)
-    df_xtract = df_xtract.groupby(link_group_string).apply(rename_groups)
-    df_xtract.to_csv("dist_final_out.csv")
-    # df_xtract[link_group_string] = df_xtract[link_group_string].astype('str')
-    # df_xtract = df_xtract.loc[df_xtract[fdr_string] <= 0.05]
-
-    plib.save_fig("xtract_dist_link_overview".format(args.outname))
-    ax = sns.scatterplot(x=link_group_string, y=log2_string, style=type_string, hue=type_string, data=df_xtract,
-                        palette="Set1", s=150)
-    ax.xaxis.set_tick_params(rotation=90)
-    # ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
-    num_x = len(df_xtract[link_group_string].unique())
-    b_alt = True
-    for x in range(num_x):
-        if b_alt:
-            c = 'lightcoral'
-            b_alt = False
-        else:
-            c = 'skyblue'
-            b_alt = True
-        ax.vlines(x=x,ymin=min(df_xtract[log2_string]),ymax=max(df_xtract[log2_string]),linestyles=':',colors=c)
-    # ax.hlines(y=0, xmin=min(df_xtract[link_group_string]), xmax=max(df_xtract[link_group_string]), linestyles='-', colors='grey')
-    ax.hlines(y=1, xmin=0, xmax=num_x-1, linestyles='--', colors='grey')
-    ax.hlines(y=-1, xmin=0, xmax=num_x-1, linestyles='--', colors='grey')
-    if df_dist is not None:
-        df_xtract_xl_only = df_xtract[~df_xtract[dist_string].isnull()]
-        df_xtract_xl_only[dist_string] = df_xtract_xl_only[dist_string].round().astype('int32')
-        plib.label_point(df_xtract_xl_only[link_group_string], df_xtract_xl_only[log2_string], df_xtract_xl_only[dist_string], ax)
-    plib.save_fig("xtract_monolinks".format(args.outname))
-    if df_dist is not None:
-        plt.clf()
-        sns.regplot(data=df_xtract, y=dist_string, x=log2_string)
-        plib.save_fig("xtract_dist".format(args.outname))
-
-
-
-def get_matching_monolinks(df_xtract: pd.DataFrame):
-    df_new = pd.DataFrame(df_xtract)
-    df_new = df_new.assign(mono_to_xlink=pd.Series([[] for l in range(len(df_new))]),
-                           xlink_to_mono=pd.Series([[] for l in range(len(df_new))]),
-                           link_group=pd.Series([] for l in range(len(df_new))),
-                           partners_found=pd.Series(0 for l in range(len(df_new))))
-    df_mono = df_xtract.loc[df_xtract[type_string] == type_mono_string]
-    df_xlink = df_xtract.loc[df_xtract[type_string] == type_xlink_string]
-    i_lnk_grp = 0
-    # iterrows is painfully slow; should use something else: https://stackoverflow.com/questions/24870953/does-iterrows-have-performance-issues
-    # now using converted dict
-    dict_xlink = df_xlink.to_dict(orient='index')
-    dict_mono = df_mono.to_dict(orient='index')
-    for entry_xlink in dict_xlink.values():
-        i_lnk_grp += 1
-        for entry_mono in dict_mono.values():
-            if entry_mono[uid_string] in entry_xlink[uid_string]:
-                df_new.loc[df_new[uid_string] == entry_mono[uid_string], mono_to_xlink_string] += [entry_xlink[uid_string]]
-                df_new.loc[df_new[uid_string] == entry_xlink[uid_string], xlink_to_mono_string] += [entry_mono[uid_string]]
-                df_new.loc[df_new[uid_string] == entry_mono[uid_string], link_group_string] += [i_lnk_grp]
-                df_new.loc[df_new[uid_string] == entry_xlink[uid_string], link_group_string] = i_lnk_grp
-                df_new.loc[df_new[uid_string] == entry_mono[uid_string], found_partners_string] += 1
-                df_new.loc[df_new[uid_string] == entry_xlink[uid_string], found_partners_string] += 1
-            else:
-                df_new.loc[df_new[uid_string] == entry_xlink[uid_string], link_group_string] = i_lnk_grp
-    df_mono = df_new.loc[df_new[type_string] == type_mono_string]
-    df_xlink = df_new.loc[df_new[type_string] == type_xlink_string]
-    df_new = pd.DataFrame()
-    for i_mono, entry_mono in df_mono.iterrows():
-        partners_found = entry_mono[found_partners_string]
-        if partners_found > 0:
-            for group_id in entry_mono[link_group_string]:
-                new_entry_mono = pd.Series(entry_mono)
-                new_entry_mono.loc[link_group_string] = group_id
-                df_new = df_new.append([new_entry_mono])
-            # print(entry_mono[found_partners_string])
-    # print(df_new.loc[df_xtract[type_string] == type_mono_string])
-    df_new = df_new.append(df_xlink)
-    # print(df_new.loc[df_xtract[type_string] == type_xlink_string])
+    df_xlinks = df[df[xt_db.type_string] == xt_db.type_xlink_string].copy()  # using a copy since I set values in the next line
+    df_xlinks[xt_db.link_group_string] = range(len(df_xlinks))
+    df_monos = df[df[xt_db.type_string] == xt_db.type_mono_string]
+    df_new = df_xlinks.groupby(xt_db.uxid_string).apply(lambda x: find_associated_link(x, df_monos)).reset_index(drop=True)
+    num_mono1 = df_new.groupby(xt_db.link_group_string).filter(lambda x: len(x[x[xt_db.type_string] == xt_db.type_mono_string]) >= 1 and len(x[x[xt_db.type_string] == xt_db.type_xlink_string]) == 1)[xt_db.link_group_string].nunique()
+    num_mono2 = df_new.groupby(xt_db.link_group_string).filter(lambda x: len(x[x[xt_db.type_string] == xt_db.type_mono_string]) == 2 and len(x[x[xt_db.type_string] == xt_db.type_xlink_string]) == 1)[xt_db.link_group_string].nunique()
+    num_total = df_new[xt_db.link_group_string].nunique()
+    print("Link groups with 1 monolink: {0} ({1:.0%})".format(num_mono1, num_mono1/num_total))
+    print("Link groups with 2 monolinks: {0} ({1:.0%})".format(num_mono2, num_mono2/num_total))
     return df_new
 
 
+def plot_mono_vs_xlink_quant(df, mono_1_plotter, mono_2_plotter):
+    df_1 = filter_link_groups(df, 1)
+    df_2 = filter_link_groups(df, 2)
+    mono_1_plotter.plot_mono_vs_xlink_quant(df_1)
+    mono_2_plotter.plot_mono_vs_xlink_quant(df_2)
+
+
+def plot_associated_mono_links(df, df_dist, mono_1_plotter, mono_2_plotter):
+    df_1 = filter_link_groups(df, 1)
+    df_2 = filter_link_groups(df, 2)
+    mono_1_plotter.plot_associated_mono_links(df_1, df_dist)
+    mono_2_plotter.plot_associated_mono_links(df_2, df_dist)
+
+def plot_dist_vs_quant(df, df_dist):
+    plotter = plot_xt.PlotMaster('plots_quant')
+    plotter.plot_dist_vs_quant(df, df_dist)
+
+
+def renumber_groups(x):
+    if not hasattr(renumber_groups, "counter"):
+        renumber_groups.counter = 0  # it doesn't exist yet, so initialize it
+    x[xt_db.link_group_string] = renumber_groups.counter
+    renumber_groups.counter += 1
+    return x
+
+
+def rename_groups(x):
+    uid_list = []
+    entry_link = x[x[xt_db.type_string] == xt_db.type_xlink_string]
+    uid_list.append(entry_link[xt_db.uxid_string].iloc[0])
+    for n in range(len(x[x[xt_db.type_string] == xt_db.type_mono_string])):
+        uid_list.append(entry_link[xt_db.uxid_string].iloc[0])
+    x[xt_db.link_group_string] = uid_list
+    return x
+
+
+def filter_imputed(df):
+    # == means link was found in both experiments; stupid libreoffice saves == as Err:520
+    df = df[(df['sign'] == '==') | (df['sign'] == 'Err:520') ]
+    return df
+
+
+def filter_link_groups(df, no_monos):
+    df = df.groupby(xt_db.link_group_string).filter(lambda x: len(x[x[xt_db.type_string] == xt_db.type_xlink_string]) == 1)
+    df = df.groupby(xt_db.link_group_string).filter(lambda x: len(x[x[xt_db.type_string] == xt_db.type_mono_string]) >= no_monos)
+    df = df.reset_index(drop=True)
+    df = df.groupby(xt_db.link_group_string).apply(rename_groups)
+    return df
+
+
 def main():
-    dfs_xquest = []
     df_xtract = None
     df_dist = None
     for inp in args.input:
@@ -183,20 +114,30 @@ def main():
             df = pd.read_csv(inp, delim_whitespace=True)
         else:
             df = pd.read_csv(inp, engine='python')
-        if uid_string in df and not dist_string in df:
+        if xt_db.uxid_string in df and not xt_db.dist_string in df:
             df_xtract = df
-        elif dist_string in df:
+        elif xt_db.dist_string in df:
             df_dist = df
-        elif uxid_string in df:
-            dfs_xquest.append(df)
         else:
             print("WARNING: No compatible input found for {0}".format(inp))
-    if dfs_xquest:
-        plot_links(df_xtract, dfs_xquest)
+    if df_dist is None:
+        mono_1_plotter = plot_xt.PlotMaster("plots_quant/mono_1" + args.outname)
+        mono_2_plotter = plot_xt.PlotMaster("plots_quant/mono_2" + args.outname)
     else:
-        plot_associated_mono_links(df_xtract, df_dist)
+        mono_1_plotter = plot_xt.PlotMaster("plots_quant/mono_1_dist" + args.outname)
+        mono_2_plotter = plot_xt.PlotMaster("plots_quant/mono_2_dist" + args.outname)
+    df_tmp = df_xtract[xt_db.uxid_string].str.split(':').apply(ll.get_prot_name_and_link_pos)
+    # direct assignment does not work as it takes just the column headers as values
+    df_xtract[xt_db.pos_string], df_xtract[xt_db.prot_string] = df_tmp[0], df_tmp[1]
+    df_xtract = filter_imputed(df_xtract)
+    df_xtract = get_matching_monos(df_xtract)
+    df_xtract = df_xtract.sort_values([xt_db.link_group_string, xt_db.type_string])
+    df_xtract.to_csv("link_groups_out.csv")
+    plot_mono_vs_xlink_quant(df_xtract, mono_1_plotter, mono_2_plotter)
+    plot_associated_mono_links(df_xtract, df_dist, mono_1_plotter, mono_2_plotter)
+    if df_dist is not None:
+        plot_dist_vs_quant(df_xtract, df_dist)
 
-    plt.show()
 
 if __name__ == "__main__":
     main()
