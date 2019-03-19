@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python
 
 import matplotlib
 matplotlib.use('agg')
@@ -94,6 +94,7 @@ def main():
         plotter.plot_light_heavy_scatter()
     elif args.plot == 'rep':
         plotter.plot_bio_rep_scatter()
+        plotter.plot_bio_rep_ma_scatter()
     elif args.plot == 'rep_bar':
         plotter.plot_bio_rep_bar()
     elif args.plot == 'cluster':
@@ -104,6 +105,7 @@ def main():
         plotter.plot_link_overview(int(args.experiment_percentage))
     elif args.plot == 'log2r':
         plotter.plot_log2ratio()
+        plotter.plot_log2ma()
     elif args.plot == 'dil':
         plotter.plot_dilution_series()
     elif args.plot == 'domain':
@@ -111,7 +113,8 @@ def main():
     elif args.plot == 'monoq':
         plotter.plot_mono_vs_xlink_quant()
     elif args.plot == 'dist':
-        plotter.plot_dist_vs_quant()
+        # plotter.plot_dist_vs_quant()
+        plotter.plot_dist_quant_corr()
     else:
         print("WARNING: No compatible plot specified: {0}".format(args.input))
         exit(1)
