@@ -97,7 +97,7 @@ def main():
         plotter.plot_light_heavy_scatter()
     elif args.plot == 'rep':
         plotter.plot_bio_rep_scatter()
-        plotter.plot_bio_rep_ma_scatter()
+        # plotter.plot_bio_rep_ma_scatter()
     elif args.plot == 'rep_bar':
         plotter.plot_bio_rep_bar()
     elif args.plot == 'cluster':
