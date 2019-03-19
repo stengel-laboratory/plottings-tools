@@ -42,6 +42,9 @@ parser.add_argument('-ep', '--experiment_percentage', action="store", dest="expe
                     help="Optionally specify the (inclusive) percentage of experiments a link has to be found in. "
                          "Only relevant for domain and link type plots"
                          "Possible values: Any value between 0 and 100")
+parser.add_argument('-v' '--vio_list', action="store", dest='vio_list', default=['lh', 'xt'], type=str, nargs='+',
+                    help="List of input possible violation filters separated by spaces. "
+                         "Possible values: lh (light/heavy log2 ratio, xt (xTract type violations), none (no filtering")
 parser.add_argument('-dom', '--domains', action="store", dest="domains", default="",
                     help="Optionally specify a file containing domain ranges to color certain plots.")
 parser.add_argument('-dis', '--distance', action="store", dest="distance", default="",
@@ -84,7 +87,7 @@ def main():
     bag_cont = process_bag.BagContainer(level=args.level, df_list=df_list, filter=args.filter, sel_exp=args.sel_exp,
                                         df_domains=df_domains, impute_missing=args.impute, norm_exps=args.norm_experiments,
                                         norm_reps=args.norm_replicates, df_dist=df_dist, whitelist=df_whitelist,
-                                        sortlist=df_sortlist)
+                                        sortlist=df_sortlist, vio_list=args.vio_list)
     plotter = plot_bag.PlotMaster(bag_cont, out_folder=args.outname)
     if args.plot == 'scatter':
         plotter.plot_scatter()
