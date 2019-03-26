@@ -3,21 +3,25 @@
 import matplotlib
 matplotlib.use('agg')
 import os
-import argparse
+import configargparse
 import pandas as pd
 from link_library.bag_container_library import plot_bag
 from link_library.bag_container_library import process_bag
+import logging
+
 
 # TODO: uid level is fine; however for doing the violations on uxid level they would have to be calculated before sum()
 # TODO: use regular containers as a control
 
 desc = """Kai Kammer - 2018-09-17. 
-Script to plot xTract bag container ms1 areas. All plots are saved to the folder 'plots'
+Script to plot xTract bag container ms1 areas. All plots are by default saved to the folder 'plots'
 """
 
-parser = argparse.ArgumentParser(description=desc, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser = configargparse.ArgParser(description=desc, formatter_class=configargparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('input', action="store", default=None, type=str, nargs='+',
                     help="List of input csv files separated by spaces")
+parser.add_argument('-c', '--config_file', required=False, is_config_file=True,
+                    help='Optionally specify a config file containing your settings')
 parser.add_argument('-o', '--outname', action="store", dest="outname", default='plots',
                     help="Name of the plot folder")
 parser.add_argument('-l', '--level_ms1', action="store", dest="level", default='uID',
@@ -42,7 +46,7 @@ parser.add_argument('-ep', '--experiment_percentage', action="store", dest="expe
                     help="Optionally specify the (inclusive) percentage of experiments a link has to be found in. "
                          "Only relevant for domain and link type plots"
                          "Possible values: Any value between 0 and 100")
-parser.add_argument('-v' '--vio_list', action="store", dest='vio_list', default=['lh', 'xt'], type=str, nargs='+',
+parser.add_argument('-v', '--vio_list', action="store", dest='vio_list', default=['lh', 'xt'], type=str, nargs='+',
                     help="List of input possible violation filters separated by spaces. "
                          "Possible values: lh (light/heavy log2 ratio, xt (xTract type violations), none (no filtering")
 parser.add_argument('-dom', '--domains', action="store", dest="domains", default="",
@@ -54,6 +58,12 @@ parser.add_argument('-w', '--whitelist', action="store", dest="whitelist", defau
 parser.add_argument('-s', '--sortlist', action="store", dest="sortlist", default="",
                     help="Optionally specify a file containing the order of experiments.")
 args = parser.parse_args()
+
+log_file = '{0}/plot_bag_container.log'.format(args.outname)
+os.makedirs(args.outname, exist_ok=True)
+logging.basicConfig(filename=log_file,level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%d/%m/%Y %H:%M:%S:')
+print('\nPlot parameters are written to {0}\n'.format(log_file))
+logging.info('Start plot with the following parameters \n' + parser.format_values())
 
 
 def main():
@@ -121,7 +131,7 @@ def main():
     else:
         print("WARNING: No compatible plot specified: {0}".format(args.input))
         exit(1)
-
+    logging.info("Plot was successful")
 
 if __name__ == "__main__":
     main()
