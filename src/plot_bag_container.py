@@ -33,7 +33,8 @@ parser.add_argument('-l', '--level_ms1', action="store", dest="level", default='
 parser.add_argument('-p', '--plot_type', action="store", dest="plot", default='scatter',
                     help="Type of plot. Possible values: scatter, bar,"
                          " lh (light heavy), rep (replicates), rep_bar, cluster, std (standard deviation),"
-                         " link (ms1 area overview), log2r (log2ratio), dil (dilution series), domain, dist (distance)")
+                         " link (ms1 area overview), log2r (log2ratio), dil (dilution series), domain,"
+                         " domain_sl (domain single link), dist (distance)")
 parser.add_argument('-f', '--filter', action="store", dest="filter", default=None,
                     help="Optionally specify a link type to filter for. Possible values: monolink, xlink")
 parser.add_argument('-e', '--sel_exp', action="store_true", dest="sel_exp", default=False,
@@ -126,10 +127,13 @@ def main():
         plotter.plot_dilution_series()
     elif args.plot == 'domain':
         plotter.plot_domain_overview(int(args.experiment_percentage))
+    elif args.plot == 'domain_sl':
+        plotter.plot_domain_single_link(int(args.experiment_percentage))
+        plotter.plot_domain_single_link(int(args.experiment_percentage), log2ratio=True)
     elif args.plot == 'monoq':
         plotter.plot_mono_vs_xlink_quant()
     elif args.plot == 'dist':
-        # plotter.plot_dist_vs_quant()
+        plotter.plot_dist_vs_quant()
         plotter.plot_dist_quant_corr()
     else:
         print("WARNING: No compatible plot specified: {0}".format(args.input))
