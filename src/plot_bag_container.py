@@ -36,7 +36,8 @@ parser.add_argument('-p', '--plot_type', action="store", dest="plot", default='s
                          " link (ms1 area overview), log2r (log2ratio), dil (dilution series), domain,"
                          " domain_sl (domain single link), dist (distance)")
 parser.add_argument('-f', '--filter', action="store", dest="filter", default=None,
-                    help="Optionally specify a link type to filter for. Possible values: monolink, xlink")
+                    help="Optionally specify a link type to filter for. Possible values: monolink, xlink, "
+                         "intralink (loop link)")
 parser.add_argument('-e', '--sel_exp', action="store_true", dest="sel_exp", default=False,
                     help="Optionally provide this flag to exclude specific experiments before plotting")
 parser.add_argument('-i', '--impute', action="store_true", dest="impute", default=False,
@@ -129,6 +130,7 @@ def main():
         plotter.plot_domain_overview(int(args.experiment_percentage))
     elif args.plot == 'domain_sl':
         plotter.plot_domain_single_link(int(args.experiment_percentage))
+        # plotter.plot_domain_single_link(int(args.experiment_percentage), ratio_mean=True)
         plotter.plot_domain_single_link(int(args.experiment_percentage), log2ratio=True)
     elif args.plot == 'monoq':
         plotter.plot_mono_vs_xlink_quant()
