@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python
 
 import argparse
 import numpy as np
@@ -17,8 +17,8 @@ Also allows plotting of xtract raw_stat.xls files
 parser = argparse.ArgumentParser(description=desc, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('input', action="store",
                     help="Name of the input file")
-parser.add_argument('-o', '--outname', action="store", dest="outname", default='plot.png',
-                    help="Name for the output figure")
+parser.add_argument('-o', '--outname', action="store", dest="outname", default='plots',
+                    help="Folder name to save the plots to. Will be created if it does not exist yet")
 args = parser.parse_args()
 
 def correct_pvalues_for_multiple_testing(pvalues, correction_type = "Benjamini-Hochberg"):
@@ -112,19 +112,19 @@ def plot_xtract_df(df):
     df = df.reset_index(drop=True)
     df["fdr_corr"] = get_bh_fdr(df["pvalue"].values, xtract=False)
     df.hist(column=["pvalue", "Bonf", "FDR", "fdr_corr"], density=True, range=[0, 1], sharey=True, grid=False)
-    plib.save_fig("xtract_hist")
+    plib.save_fig("xtract_hist", out_dir=args.outname)
     df.plot(title="Stats Comparison", kind="line", y=["pvalue", "Bonf", "FDR", "fdr_corr"])
-    plib.save_fig("xtract_stats")
+    plib.save_fig("xtract_stats", out_dir=args.outname)
     df.plot(title="log2", kind="kde", y=["log2ratio"])
-    plib.save_fig("xtract_log2_kde")
+    plib.save_fig("xtract_log2_kde", out_dir=args.outname)
     df = df.sort_values("log2ratio")
     df = df.reset_index()
     g = sns.jointplot(x='log2ratio', y='FDR', data=df, kind='hex')
-    plib.save_fig("xtract_log2_vs_fdr_hex")
+    plib.save_fig("xtract_log2_vs_fdr_hex", out_dir=args.outname)
     ax = df.plot(title="log2 vs qval", kind="line", y=["log2ratio", "FDR"], secondary_y=["FDR"])
     ax_min , ax_max = ax.get_xlim()
     ax.hlines(y=[-1,1], xmin=ax_min, xmax=ax_max, linestyles='--', colors='grey')
-    plib.save_fig("xtract_log2_and_fdr")
+    plib.save_fig("xtract_log2_and_fdr", out_dir=args.outname)
     df = df.sort_values("FDR")
     df = df.reset_index(drop=True)
     print(df["FDR"])
@@ -134,19 +134,19 @@ def plot_xquest_df(df):
     df = df.sort_values("FDR")
     df = df.reset_index()
     df.plot(kind="line", y=["ld-Score"], x="FDR")
-    plib.save_fig("xquest_fdr_vs_ld")
+    plib.save_fig("xquest_fdr_vs_ld", out_dir=args.outname)
     # df.plot(kind="line", y=["FDR"])
     df.plot(kind="kde", y=["ld-Score"])
-    plib.save_fig("xquest_ld_kde")
+    plib.save_fig("xquest_ld_kde", out_dir=args.outname)
     df.hist()
-    plib.save_fig("xquest_hist_all")
+    plib.save_fig("xquest_hist_all", out_dir=args.outname)
 
 def plot_sample_df(sample_dict):
     df = pd.DataFrame().from_dict(sample_dict)
     df.plot(title="Sign. Comparison", kind="line")
-    plib.save_fig("sample_dist")
+    plib.save_fig("sample_dist", out_dir=args.outname)
     df.hist(density=True, range=[0, 1], sharey=True)
-    plib.save_fig("sample_dist_hist")
+    plib.save_fig("sample_dist_hist", out_dir=args.outname)
 
 def plot_xtract_raw_stats(df):
     # FDR=FP/(FP+TP); TPR=TP/(TP+FN) (sensitivity); TNR=TN/(TN+FP) (specificity)
@@ -175,7 +175,7 @@ def plot_xtract_raw_stats(df):
     # pd_ax.axvline(x=sens_1_crossover)
     # pd_ax.plot((sens_1_crossover, sens_1_crossover), (0,1),label="svalue cutoff")
     # df.plot(x=xval, y=["TP", "FP", "TN", "FN"])
-    plib.save_fig("xtract_raw_stats")
+    plib.save_fig("xtract_raw_stats", out_dir=args.outname)
 
 def main():
     uxid_string = 'uxID'
