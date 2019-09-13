@@ -135,7 +135,8 @@ def main():
     elif args.plot == 'monoq':
         plotter.plot_mono_vs_xlink_quant()
     elif args.plot == 'dist':
-        plotter.plot_dist_vs_quant()
+        plotter.plot_dist_vs_quant_alt()
+        plotter.plot_dist_vs_quant_log2_alt()
         plotter.plot_dist_quant_corr()
     else:
         print("WARNING: No compatible plot specified: {0}".format(args.input))
