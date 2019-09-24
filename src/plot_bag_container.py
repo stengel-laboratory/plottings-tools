@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 
 import matplotlib
+
 matplotlib.use('agg')
 import os
 import configargparse
 import pandas as pd
-from link_library.bag_container_library import plot_bag
-from link_library.bag_container_library import process_bag
 import logging
-
+import link_library as ll
 
 # TODO: uid level is fine; however for doing the violations on uxid level they would have to be calculated before sum()
 # TODO: use regular containers as a control
@@ -17,10 +16,33 @@ desc = """Kai Kammer - 2018-09-17.\n
 Script to plot xTract bag container ms1 areas. All plots are by default saved to the folder 'plots'.\n
 """
 
+
+# create a hybrid parser formatter allowing for default arguments and \n new lines in description and epilogue
 class Formatter(configargparse.ArgumentDefaultsHelpFormatter, configargparse.RawDescriptionHelpFormatter): pass
-parser = configargparse.ArgParser(description=desc, formatter_class=Formatter)
+
+
+# same functionality as hybrid formatter above; additionally recognizes 'R|' in arguments and will allow \n in
+# arguments' help texts starting with 'R|'. Taken from: https://stackoverflow.com/a/22157136
+class SmartFormatter(configargparse.ArgumentDefaultsHelpFormatter, configargparse.RawDescriptionHelpFormatter):
+    def _split_lines(self, text, width):
+        if text.startswith('R|'):
+            return text[2:].splitlines()
+        # this is the RawTextHelpFormatter._split_lines
+        return configargparse.HelpFormatter._split_lines(self, text, width)
+
+# helper func to return a dict like this: key1: value1 \n key2: value2 \n etc...
+def format_dict(my_dict):
+    return "\n".join(": ".join((k, str(v))) for k, v in sorted(my_dict.items()))
+
+
+valid_plots_dict = {'lh': 'light heavy', 'rep': 'replicates', 'rep_bar': 'replicates bar', 'cluster': 'cluster map',
+               'std': 'standard deviation', 'link': 'ms1 area overview', 'log2r': 'log2ratio',
+               'dil': 'dilution series', 'domain': 'protein domains', 'domain_sl': 'single links in protein domains',
+               'dist': 'distance'}
+parser = configargparse.ArgParser(description=desc, formatter_class=SmartFormatter)
 parser.add_argument('input', action="store", default=None, type=str, nargs='+',
                     help="List of input csv files separated by spaces")
+parser.add_argument('-V', '--version', action='version', version='%(prog)s ' + ll.__version__)
 parser.add_argument('-cf', '--config_file', is_config_file=True,
                     help='Optionally specify a config file containing your settings')
 parser.add_argument('-cw', '--config_write', is_write_out_config_file_arg=True,
@@ -30,11 +52,10 @@ parser.add_argument('-o', '--outname', action="store", dest="outname", default='
 parser.add_argument('-l', '--level_ms1', action="store", dest="level", default='uID',
                     help="Level on which the ms1 intensities are summed. Either uID (peptide)"
                          "or uxID (protein).")
-parser.add_argument('-p', '--plot_type', action="store", dest="plot", default='scatter',
-                    help="Type of plot. Possible values: scatter, bar,"
-                         " lh (light heavy), rep (replicates), rep_bar, cluster, std (standard deviation),"
-                         " link (ms1 area overview), log2r (log2ratio), dil (dilution series), domain,"
-                         " domain_sl (domain single link), dist (distance)")
+# choices look ugly with long list; hide them by setting metavar='' and manually print them instead
+parser.add_argument('-p', '--plot_type', action="store", dest="plot", default='cluster',
+                    choices=valid_plots_dict.keys(), metavar='',
+                    help=f"R|Type of plot. Possible values are\n{format_dict(valid_plots_dict)}")
 parser.add_argument('-f', '--filter', action="store", dest="filter", default=None,
                     help="Optionally specify a link type to filter for. Possible values: monolink, xlink, "
                          "intralink (loop link)")
@@ -66,11 +87,13 @@ args = parser.parse_args()
 
 log_file = '{0}/plot_bag_container.log'.format(args.outname)
 os.makedirs(args.outname, exist_ok=True)
-logging.basicConfig(filename=log_file,level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%d/%m/%Y %H:%M:%S:')
+logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s %(message)s',
+                    datefmt='%d/%m/%Y %H:%M:%S:')
 
 
 def main():
     print('\nPlot parameters are written to {0}\n'.format(log_file))
+    logging.info(f'Using link library version {ll.__version__}')
     logging.info('Start plot with the following parameters \n' + parser.format_values())
     df_list = []  # tuple (dataframe, bag_container)
     df_domains = None
@@ -99,11 +122,12 @@ def main():
         df_whitelist = pd.read_csv(args.whitelist, engine='python')
     if args.sortlist:
         df_sortlist = pd.read_csv(args.sortlist, engine='python')
-    bag_cont = process_bag.BagContainer(level=args.level, df_list=df_list, filter=args.filter, sel_exp=args.sel_exp,
-                                        df_domains=df_domains, impute_missing=args.impute, norm_exps=args.norm_experiments,
+    bag_cont = ll.process_bag.BagContainer(level=args.level, df_list=df_list, filter=args.filter, sel_exp=args.sel_exp,
+                                        df_domains=df_domains, impute_missing=args.impute,
+                                        norm_exps=args.norm_experiments,
                                         norm_reps=args.norm_replicates, df_dist=df_dist, whitelist=df_whitelist,
                                         sortlist=df_sortlist, vio_list=args.vio_list)
-    plotter = plot_bag.PlotMaster(bag_cont, out_folder=args.outname)
+    plotter = ll.plot_bag.PlotMaster(bag_cont, out_folder=args.outname)
     if args.plot == 'scatter':
         plotter.plot_scatter()
     elif args.plot == 'bar':
@@ -142,6 +166,7 @@ def main():
         print("WARNING: No compatible plot specified: {0}".format(args.input))
         exit(1)
     logging.info("Plot was successful")
+
 
 if __name__ == "__main__":
     main()
