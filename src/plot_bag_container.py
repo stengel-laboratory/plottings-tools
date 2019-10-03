@@ -167,8 +167,7 @@ def main():
     else:
         print("WARNING: No compatible plot specified: {0}".format(args.input))
         exit(1)
-    logging.info("Plot was successful")
-
+    logging.info("Plot was successful\n")
 
 if __name__ == "__main__":
     main()
