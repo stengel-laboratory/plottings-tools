@@ -8,6 +8,8 @@ import configargparse
 import pandas as pd
 import logging
 import link_library as ll
+from link_library.bag_container_library import process_bag
+from link_library.bag_container_library import plot_bag
 
 # TODO: uid level is fine; however for doing the violations on uxid level they would have to be calculated before sum()
 # TODO: use regular containers as a control
@@ -122,12 +124,12 @@ def main():
         df_whitelist = pd.read_csv(args.whitelist, engine='python')
     if args.sortlist:
         df_sortlist = pd.read_csv(args.sortlist, engine='python')
-    bag_cont = ll.process_bag.BagContainer(level=args.level, df_list=df_list, filter=args.filter, sel_exp=args.sel_exp,
+    bag_cont = process_bag.BagContainer(level=args.level, df_list=df_list, filter=args.filter, sel_exp=args.sel_exp,
                                         df_domains=df_domains, impute_missing=args.impute,
                                         norm_exps=args.norm_experiments,
                                         norm_reps=args.norm_replicates, df_dist=df_dist, whitelist=df_whitelist,
                                         sortlist=df_sortlist, vio_list=args.vio_list)
-    plotter = ll.plot_bag.PlotMaster(bag_cont, out_folder=args.outname)
+    plotter = plot_bag.PlotMaster(bag_cont, out_folder=args.outname)
     if args.plot == 'scatter':
         plotter.plot_scatter()
     elif args.plot == 'bar':
