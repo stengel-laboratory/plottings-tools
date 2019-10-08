@@ -147,6 +147,7 @@ def main():
         plotter.plot_ms1_area_std()
     elif args.plot == 'link':
         plotter.plot_link_overview(int(args.experiment_percentage))
+        plotter.plot_link_overview(int(args.experiment_percentage), convert_to_log2=False)
     elif args.plot == 'log2r':
         plotter.plot_log2ratio()
         plotter.plot_log2ma()
