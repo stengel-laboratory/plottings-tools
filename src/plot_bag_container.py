@@ -82,7 +82,7 @@ parser.add_argument('-dom', '--domains', action="store", dest="domains", default
 parser.add_argument('-dis', '--distance', action="store", dest="distance", default=None,
                     help="Optionally specify a file containing domain ranges to color certain plots.")
 parser.add_argument('-w', '--whitelist', action="store", dest="whitelist", default=None,
-                    help="Optionally specify a file containing allowed links (uxids), i.e. a whitelist.")
+                    help="Optionally specify a whitelist. It is possible to filter on any valid column.")
 parser.add_argument('-s', '--sortlist', action="store", dest="sortlist", default=None,
                     help="Optionally specify a file containing the order of experiments.")
 args = parser.parse_args()
