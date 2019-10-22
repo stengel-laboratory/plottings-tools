@@ -40,7 +40,7 @@ def format_dict(my_dict):
 valid_plots_dict = {'lh': 'light heavy', 'rep': 'replicates', 'rep_bar': 'replicates bar', 'cluster': 'cluster map',
                'std': 'standard deviation', 'link': 'ms1 area overview', 'log2r': 'log2ratio',
                'dil': 'dilution series', 'domain': 'protein domains', 'domain_sl': 'single links in protein domains',
-               'dist': 'distance'}
+               'dist': 'distance', 'reaction': 'reaction state (quenched vs. hydrolized monolinks)'}
 parser = configargparse.ArgParser(description=desc, formatter_class=SmartFormatter)
 parser.add_argument('input', action="store", default=None, type=str, nargs='+',
                     help="List of input csv files separated by spaces")
@@ -165,6 +165,9 @@ def main():
         plotter.plot_dist_vs_quant_alt()
         plotter.plot_dist_vs_quant_log2_alt()
         plotter.plot_dist_quant_corr()
+    elif args.plot == 'reaction':
+        plotter.plot_reaction_state()
+        plotter.plot_reaction_state_log2ratio()
     else:
         print("WARNING: No compatible plot specified: {0}".format(args.input))
         exit(1)
