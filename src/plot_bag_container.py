@@ -57,7 +57,7 @@ parser.add_argument('-l', '--level_ms1', action="store", dest="level", default='
 # choices look ugly with long list; hide them by setting metavar='' and manually print them instead
 parser.add_argument('-p', '--plot_type', action="store", dest="plot", default='cluster',
                     choices=valid_plots_dict.keys(), metavar='',
-                    help=f"R|Type of plot. Possible values are\n{format_dict(valid_plots_dict)}")
+                    help=f"Type of plot. Possible values are\n{format_dict(valid_plots_dict)}")
 parser.add_argument('-f', '--filter', action="store", dest="filter", default=None,
                     help="Optionally specify a link type to filter for. Possible values: monolink, xlink, "
                          "intralink (loop link)")
@@ -85,6 +85,8 @@ parser.add_argument('-w', '--whitelist', action="store", dest="whitelist", defau
                     help="Optionally specify a whitelist. It is possible to filter on any valid column.")
 parser.add_argument('-s', '--sortlist', action="store", dest="sortlist", default=None,
                     help="Optionally specify a file containing the order of experiments.")
+parser.add_argument('-m', '--map', action="store", dest="map", default=None,
+                    help="Optionally specify a file containing a mapping for values in columns.")
 args = parser.parse_args()
 
 log_file = '{0}/plot_bag_container.log'.format(args.outname)
@@ -102,6 +104,7 @@ def main():
     df_dist = None
     df_whitelist = None
     df_sortlist = None
+    df_map = None
     uid_string = "b_peptide_uID"
     for inp in args.input:
         if ".xls" in inp:
@@ -124,11 +127,13 @@ def main():
         df_whitelist = pd.read_csv(args.whitelist, engine='python')
     if args.sortlist:
         df_sortlist = pd.read_csv(args.sortlist, engine='python')
+    if args.map:
+        df_map = pd.read_csv(args.map, engine='python')
     bag_cont = process_bag.BagContainer(level=args.level, df_list=df_list, filter=args.filter, sel_exp=args.sel_exp,
                                         df_domains=df_domains, impute_missing=args.impute,
                                         norm_exps=args.norm_experiments,
                                         norm_reps=args.norm_replicates, df_dist=df_dist, whitelist=df_whitelist,
-                                        sortlist=df_sortlist, vio_list=args.vio_list)
+                                        sortlist=df_sortlist, vio_list=args.vio_list, df_map=df_map)
     plotter = plot_bag.PlotMaster(bag_cont, out_folder=args.outname)
     if args.plot == 'scatter':
         plotter.plot_scatter()

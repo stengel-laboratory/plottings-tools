@@ -6,7 +6,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import link_library.plot_library as plib
-import statsmodels.sandbox.stats.multicomp as sm
+import statsmodels.stats.multitest as sm
 
 desc = """Kai Kammer - 2018-09-02. 
 Script to plot p-value distributions from xquest and xtract output and artificial distributions.
@@ -20,6 +20,7 @@ parser.add_argument('input', action="store",
 parser.add_argument('-o', '--outname', action="store", dest="outname", default='plots',
                     help="Folder name to save the plots to. Will be created if it does not exist yet")
 args = parser.parse_args()
+
 
 def correct_pvalues_for_multiple_testing(pvalues, correction_type = "Benjamini-Hochberg"):
     """
@@ -55,6 +56,7 @@ def correct_pvalues_for_multiple_testing(pvalues, correction_type = "Benjamini-H
             new_pvalues[index] = new_values[i]
     return new_pvalues
 
+
 def get_sorted_pvals(n=500):
     # so we get the same random values each time
     np.random.seed(80)
@@ -68,10 +70,12 @@ def get_sorted_pvals(n=500):
     p_vals = np.sort(p_vals)
     return p_vals
 
+
 def get_bonf(p_vals):
     bonf = p_vals * len(p_vals)
     bonf[bonf > 1] = 1
     return bonf
+
 
 def get_bh_fdr(p_vals, xtract=False):
     n = len(p_vals)
@@ -106,7 +110,6 @@ def get_bh_fdr(p_vals, xtract=False):
     return bh_s#sm.multipletests(p_vals, method='fdr_bh')[1]
 
 
-
 def plot_xtract_df(df):
     df = df.sort_values("pvalue")
     df = df.reset_index(drop=True)
@@ -125,10 +128,6 @@ def plot_xtract_df(df):
     ax_min , ax_max = ax.get_xlim()
     ax.hlines(y=[-1,1], xmin=ax_min, xmax=ax_max, linestyles='--', colors='grey')
     plib.save_fig("xtract_log2_and_fdr", out_dir=args.outname)
-    df = df.sort_values("FDR")
-    df = df.reset_index(drop=True)
-    print(df["FDR"])
-    ax = df.plot(title="qval kde", kind="line", y=["FDR"])
 
 def plot_xquest_df(df):
     df = df.sort_values("FDR")
@@ -181,7 +180,7 @@ def main():
     uxid_string = 'uxID'
     uid_string = 'uID'
     tp_string = 'TP'
-    n=100
+    n = 100
     p_vals = get_sorted_pvals(n)
     # print(p_vals)
     bonf = get_bonf(p_vals)
