@@ -121,12 +121,27 @@ def plot_xtract_df(df):
     df.plot(title="log2", kind="kde", y=["log2ratio"])
     plib.save_fig("xtract_log2_kde", out_dir=args.outname)
     df = df.sort_values("log2ratio")
-    df = df.reset_index()
-    g = sns.jointplot(x='log2ratio', y='FDR', data=df, kind='hex')
-    plib.save_fig("xtract_log2_vs_fdr_hex", out_dir=args.outname)
-    ax = df.plot(title="log2 vs qval", kind="line", y=["log2ratio", "FDR"], secondary_y=["FDR"])
+    df = df.reset_index(drop=True)
+    ax = df.plot(kind='scatter', x='log2ratio', y='FDR')
+    ax_min, ax_max = ax.get_ylim()
+    ax.vlines(x=[-1, 1], ymin=ax_min, ymax=ax_max, linestyles='--', colors='red')
+    ax_min, ax_max = ax.get_xlim()
+    ax.hlines(y=[0.05], xmin=ax_min, xmax=ax_max, linestyles='--', colors='red')
+
+    plib.save_fig("xtract_log2_vs_fdr", out_dir=args.outname)
+    ax = df.plot(title="log2 vs qval", kind="line", y=["FDR", "log2ratio"], secondary_y=["log2ratio"])
     ax_min , ax_max = ax.get_xlim()
-    ax.hlines(y=[-1,1], xmin=ax_min, xmax=ax_max, linestyles='--', colors='grey')
+    ax.hlines(y=[0.05], xmin=ax_min, xmax=ax_max, linestyles='--', colors='grey')
+    intersection_plus_one = df.iloc[(df['log2ratio']-1).abs().argsort()[:2]].index
+    intersection_plus_one = (np.mean(intersection_plus_one))
+
+    # intersection_plus_one = (intersection_plus_one.index[0] + intersection_plus_one.index[1])/2
+    intersection_minus_one = df.iloc[(df['log2ratio']+1).abs().argsort()[:2]].index
+    intersection_minus_one = (np.mean(intersection_minus_one))
+    ax_min, ax_max = ax.get_ylim()
+    ax.vlines(x=[intersection_plus_one,intersection_minus_one], ymin=ax_min, ymax=ax_max, linestyles='--', colors='grey')
+    ax.fill_between(df.index, 0, 0.05, where=((df.index <= intersection_minus_one) | (df.index >= intersection_plus_one)), alpha=0.3,
+                     interpolate=False)
     plib.save_fig("xtract_log2_and_fdr", out_dir=args.outname)
 
 def plot_xquest_df(df):
